@@ -138,4 +138,5 @@ if (require.main === module) {
   http.createServer(handleRequest).listen(PORT, () => console.log(`Jai Maa Bhadrakali Studio server running at http://localhost:${PORT}`));
 }
 
-module.exports = { handleRequest };
+module.exports = handleRequest;
+module.exports.handleRequest = handleRequest;
