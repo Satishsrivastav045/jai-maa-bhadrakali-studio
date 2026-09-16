@@ -10,6 +10,7 @@ const DATA_FILE = path.join(DATA_DIR, 'site-data.json');
 const PORT = Number(process.env.PORT || 8000);
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-this-password';
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '';
 const sessions = new Map();
 
 const defaults = {
@@ -41,6 +42,7 @@ let data = loadData();
 function saveData() { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2)); }
 function json(res, status, payload, headers = {}) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...headers }); res.end(JSON.stringify(payload)); }
 function noContent(res) { res.writeHead(204); res.end(); }
+function setCors(res) { if (!FRONTEND_ORIGIN) return; res.setHeader('Access-Control-Allow-Origin', FRONTEND_ORIGIN); res.setHeader('Access-Control-Allow-Credentials', 'true'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS'); }
 function readBody(req) { return new Promise((resolve, reject) => { let raw = ''; req.on('data', (chunk) => { raw += chunk; if (raw.length > 12_000_000) req.destroy(); }); req.on('end', () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Invalid JSON')); } }); req.on('error', reject); }); }
 function readRaw(req) { return new Promise((resolve, reject) => { const chunks = []; let size = 0; req.on('data', (chunk) => { size += chunk.length; if (size > 15_000_000) return reject(new Error('File too large')); chunks.push(chunk); }); req.on('end', () => resolve(Buffer.concat(chunks))); req.on('error', reject); }); }
 async function readMultipart(req) { const contentType = req.headers['content-type'] || ''; const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i); if (!boundaryMatch) throw new Error('Multipart boundary missing'); const boundary = Buffer.from(`--${boundaryMatch[1] || boundaryMatch[2]}`); const raw = await readRaw(req); const fields = {}; let file = null; for (const part of raw.toString('binary').split(boundary.toString('binary'))) { if (!part || part === '--\r\n' || part === '--') continue; const clean = part.replace(/^\r\n/, '').replace(/\r\n--\r\n?$/, '').replace(/\r\n$/, ''); const separator = clean.indexOf('\r\n\r\n'); if (separator < 0) continue; const headers = clean.slice(0, separator); const body = clean.slice(separator + 4); const nameMatch = headers.match(/name="([^"]+)"/); if (!nameMatch) continue; const name = nameMatch[1]; const filenameMatch = headers.match(/filename="([^"]*)"/); if (filenameMatch && filenameMatch[1]) file = { filename: filenameMatch[1], type: (headers.match(/Content-Type:\s*([^\r\n]+)/i) || [])[1] || 'application/octet-stream', data: Buffer.from(body, 'binary') }; else fields[name] = body; } return { fields, file }; }
@@ -58,11 +60,11 @@ async function handleApi(req, res, pathname) {
     if (body.username !== ADMIN_USER || body.password !== ADMIN_PASSWORD) return json(res, 401, { error: 'Invalid username or password' });
     const token = crypto.randomBytes(32).toString('hex');
     sessions.set(token, { expires: Date.now() + 8 * 60 * 60 * 1000 });
-    return json(res, 200, { ok: true }, { 'Set-Cookie': `jmb_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800` });
+    return json(res, 200, { ok: true }, { 'Set-Cookie': `jmb_session=${token}; HttpOnly; SameSite=${FRONTEND_ORIGIN ? 'None' : 'Lax'}; ${FRONTEND_ORIGIN ? 'Secure; ' : ''}Path=/; Max-Age=28800` });
   }
   if (req.method === 'POST' && pathname === '/api/logout') {
     const token = cookieValue(req, 'jmb_session'); if (token) sessions.delete(token);
-    return json(res, 200, { ok: true }, { 'Set-Cookie': 'jmb_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0' });
+    return json(res, 200, { ok: true }, { 'Set-Cookie': `jmb_session=; HttpOnly; SameSite=${FRONTEND_ORIGIN ? 'None' : 'Lax'}; ${FRONTEND_ORIGIN ? 'Secure; ' : ''}Path=/; Max-Age=0` });
   }
   if (req.method === 'GET' && pathname === '/api/session') return json(res, 200, { authenticated: isAuthed(req) });
   if (req.method === 'GET' && pathname === '/api/public') return json(res, 200, { settings: data.settings, gallery: data.gallery });
@@ -84,8 +86,10 @@ async function handleApi(req, res, pathname) {
   return json(res, 404, { error: 'API route not found' });
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res) {
   try {
+    setCors(res);
+    if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
     const { pathname } = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     if (pathname.startsWith('/api/')) return await handleApi(req, res, pathname);
     if (pathname === '/admin' || pathname === '/admin/') { res.writeHead(302, { Location: '/admin.html' }); return res.end(); }
@@ -97,6 +101,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   } catch (error) { json(res, 500, { error: error.message || 'Server error' }); }
-});
+}
 
-server.listen(PORT, () => console.log(`Jai Maa Bhadrakali Studio server running at http://localhost:${PORT}`));
+if (require.main === module) {
+  http.createServer(handleRequest).listen(PORT, () => console.log(`Jai Maa Bhadrakali Studio server running at http://localhost:${PORT}`));
+}
+
+module.exports = { handleRequest };

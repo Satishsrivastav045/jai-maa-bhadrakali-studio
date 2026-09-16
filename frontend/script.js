@@ -1,3 +1,6 @@
+const API_BASE = String(window.STUDIO_API_BASE || '').replace(/\/$/, '');
+const apiUrl = (path) => `${API_BASE}${path}`;
+
 const studioConfig = {
   name: 'Jai Maa Bhadrakali Studio',
   phone: '+918853496825',
@@ -173,7 +176,7 @@ function hydrateManagedGallery(remoteItems = null) {
 
 async function hydratePublicData() {
   try {
-    const response = await fetch('/api/public');
+    const response = await fetch(apiUrl('/api/public'));
     if (!response.ok) return;
     const payload = await response.json();
     Object.assign(studioConfig, payload.settings || {});
@@ -272,7 +275,7 @@ function setupDateForm() {
       // WhatsApp enquiry still works if browser storage is unavailable.
     }
     try {
-      await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      await fetch(apiUrl('/api/leads'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         name: data.get('name'), phone: data.get('phone'), eventType: data.get('eventType'), date: data.get('date'), location: data.get('location'), service: data.get('service'), package: data.get('package'), message: data.get('message'),
       }) });
     } catch {

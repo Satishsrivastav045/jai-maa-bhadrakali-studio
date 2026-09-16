@@ -1,12 +1,14 @@
 const state = { settings: {}, gallery: [], leads: [] };
 let toastTimer;
+const API_BASE = String(window.STUDIO_API_BASE || '').replace(/\/$/, '');
+const apiUrl = (path) => `${API_BASE}${path}`;
 
 const byId = (id) => document.getElementById(id);
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 const formatDate = (value) => value ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`)) : 'Date not set';
 
 async function api(path, options = {}) {
-  const response = await fetch(path, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+  const response = await fetch(apiUrl(path), { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
   if (response.status === 401) { document.body.classList.remove('is-authenticated'); throw new Error('Authentication required'); }
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.error || 'Request failed'); }
   return response.status === 204 ? null : response.json();
@@ -31,7 +33,7 @@ async function uploadLocalImage(file) { const uploaded = await api('/api/upload'
 const galleryFileInput = document.querySelector('#galleryFile');
 const galleryFileStatus = document.querySelector('#galleryFileStatus');
 galleryFileInput.addEventListener('change', () => { const file = galleryFileInput.files[0]; galleryFileStatus.textContent = file ? `${file.name} selected` : 'No photo selected'; });
-byId('galleryForm').addEventListener('submit', async (event) => { event.preventDefault(); try { const form = event.currentTarget; const file = galleryFileInput.files && galleryFileInput.files[0]; if (!file || !file.size) throw new Error('Choose image from computer par photo select karein'); const data = new FormData(form); const response = await fetch('/api/gallery-upload', { method: 'POST', body: data, credentials: 'same-origin' }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Upload failed'); form.reset(); galleryFileStatus.textContent = 'No photo selected'; await refresh(); toast('Image added to gallery'); } catch (error) { toast(error.message); } });
+byId('galleryForm').addEventListener('submit', async (event) => { event.preventDefault(); try { const form = event.currentTarget; const file = galleryFileInput.files && galleryFileInput.files[0]; if (!file || !file.size) throw new Error('Choose image from computer par photo select karein'); const data = new FormData(form); const response = await fetch(apiUrl('/api/gallery-upload'), { method: 'POST', body: data, credentials: 'include' }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Upload failed'); form.reset(); galleryFileStatus.textContent = 'No photo selected'; await refresh(); toast('Image added to gallery'); } catch (error) { toast(error.message); } });
 byId('settingsForm').addEventListener('submit', async (event) => { event.preventDefault(); try { await api('/api/settings', { method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) }); byId('settingsStatus').textContent = 'Saved just now'; byId('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`; await refresh(); toast('Business details saved'); } catch (error) { toast(error.message); } });
 byId('clearLeads').addEventListener('click', async () => { if (!state.leads.length || window.confirm('Clear all saved enquiries?')) { try { await api('/api/leads', { method: 'DELETE' }); await refresh(); toast('Enquiries cleared'); } catch (error) { toast(error.message); } } });
 boot();
