@@ -20,6 +20,11 @@ Never commit `backend/data/site-data.json`, admin passwords, SSH keys or custome
 
 ## Hosting
 
-Create a free **Web Service** from this public repository. Leave the root directory blank, set build command to `npm install --prefix backend`, and start command to `npm start --prefix backend`. The backend serves the frontend from the sibling `frontend` folder, so the service must use the repository root as its source.
+The current free deployment uses two services:
+
+- **Render Static Site:** Root Directory `frontend`, Build Command blank, Publish Directory `.`
+- **Vercel Functions:** Root Directory `backend`, Install Command `npm install`, Build and Output Commands blank
+
+Set these Vercel environment variables: `ADMIN_USER`, `ADMIN_PASSWORD`, `FRONTEND_ORIGIN`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. The service-role key must stay private. Supabase stores settings, enquiries and gallery records; the `gallery` Storage bucket stores uploaded images.
 
 Free services may sleep when unused. Keep the hosting provider's environment variables private.
