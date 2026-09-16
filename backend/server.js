@@ -38,7 +38,10 @@ const defaults = {
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function loadData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify(defaults, null, 2));
+  if (!fs.existsSync(DATA_FILE)) {
+    if (!process.env.VERCEL) fs.writeFileSync(DATA_FILE, JSON.stringify(defaults, null, 2));
+    return clone(defaults);
+  }
   try { return { ...clone(defaults), ...JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) }; } catch { return clone(defaults); }
 }
 let data = loadData();
