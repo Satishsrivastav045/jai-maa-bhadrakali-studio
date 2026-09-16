@@ -37,6 +37,7 @@ const defaults = {
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function loadData() {
+  if (process.env.VERCEL) return clone(defaults);
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DATA_FILE)) {
     if (!process.env.VERCEL) fs.writeFileSync(DATA_FILE, JSON.stringify(defaults, null, 2));
