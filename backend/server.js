@@ -11,10 +11,10 @@ const PORT = Number(process.env.PORT || 8000);
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-this-password';
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '';
+const SESSION_SECRET = process.env.SESSION_SECRET || ADMIN_PASSWORD;
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const useSupabase = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
-const sessions = new Map();
 
 const defaults = {
   settings: {
@@ -76,8 +76,9 @@ function setCors(res) { if (!FRONTEND_ORIGIN) return; res.setHeader('Access-Cont
 function readBody(req) { return new Promise((resolve, reject) => { let raw = ''; req.on('data', (chunk) => { raw += chunk; if (raw.length > 12_000_000) req.destroy(); }); req.on('end', () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Invalid JSON')); } }); req.on('error', reject); }); }
 function readRaw(req) { return new Promise((resolve, reject) => { const chunks = []; let size = 0; req.on('data', (chunk) => { size += chunk.length; if (size > 15_000_000) return reject(new Error('File too large')); chunks.push(chunk); }); req.on('end', () => resolve(Buffer.concat(chunks))); req.on('error', reject); }); }
 async function readMultipart(req) { const contentType = req.headers['content-type'] || ''; const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i); if (!boundaryMatch) throw new Error('Multipart boundary missing'); const boundary = Buffer.from(`--${boundaryMatch[1] || boundaryMatch[2]}`); const raw = await readRaw(req); const fields = {}; let file = null; for (const part of raw.toString('binary').split(boundary.toString('binary'))) { if (!part || part === '--\r\n' || part === '--') continue; const clean = part.replace(/^\r\n/, '').replace(/\r\n--\r\n?$/, '').replace(/\r\n$/, ''); const separator = clean.indexOf('\r\n\r\n'); if (separator < 0) continue; const headers = clean.slice(0, separator); const body = clean.slice(separator + 4); const nameMatch = headers.match(/name="([^"]+)"/); if (!nameMatch) continue; const name = nameMatch[1]; const filenameMatch = headers.match(/filename="([^"]*)"/); if (filenameMatch && filenameMatch[1]) file = { filename: filenameMatch[1], type: (headers.match(/Content-Type:\s*([^\r\n]+)/i) || [])[1] || 'application/octet-stream', data: Buffer.from(body, 'binary') }; else fields[name] = body; } return { fields, file }; }
-function cookieValue(req, name) { const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((part) => part.trim().split('='))); return cookies[name]; }
-function isAuthed(req) { const token = cookieValue(req, 'jmb_session'); const session = token && sessions.get(token); if (!session || session.expires < Date.now()) { if (token) sessions.delete(token); return false; } return true; }
+function cookieValue(req, name) { const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((part) => { const index = part.indexOf('='); return index < 0 ? [part.trim(), ''] : [part.slice(0, index).trim(), part.slice(index + 1)]; })); return cookies[name]; }
+function createSessionToken() { const expires = Date.now() + 8 * 60 * 60 * 1000; const payload = `${ADMIN_USER}.${expires}`; const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex'); return `${payload}.${signature}`; }
+function isAuthed(req) { const token = cookieValue(req, 'jmb_session') || ''; const parts = token.split('.'); if (parts.length !== 3 || parts[0] !== ADMIN_USER) return false; const payload = `${parts[0]}.${parts[1]}`; const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex'); if (parts[2].length !== expected.length || !crypto.timingSafeEqual(Buffer.from(parts[2]), Buffer.from(expected))) return false; return Number(parts[1]) > Date.now(); }
 function requireAuth(req, res) { if (isAuthed(req)) return true; json(res, 401, { error: 'Authentication required' }); return false; }
 function safeFilePath(urlPath) { const requested = urlPath === '/' ? '/index.html' : urlPath; const resolved = path.resolve(FRONTEND_ROOT, `.${requested}`); return resolved === FRONTEND_ROOT || resolved.startsWith(`${FRONTEND_ROOT}${path.sep}`) ? resolved : null; }
 function contentType(file) { return { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' }[path.extname(file).toLowerCase()] || 'application/octet-stream'; }
@@ -89,8 +90,7 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/login') {
     const body = await readBody(req);
     if (body.username !== ADMIN_USER || body.password !== ADMIN_PASSWORD) return json(res, 401, { error: 'Invalid username or password' });
-    const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, { expires: Date.now() + 8 * 60 * 60 * 1000 });
+    const token = createSessionToken();
     return json(res, 200, { ok: true }, { 'Set-Cookie': `jmb_session=${token}; HttpOnly; SameSite=${FRONTEND_ORIGIN ? 'None' : 'Lax'}; ${FRONTEND_ORIGIN ? 'Secure; ' : ''}Path=/; Max-Age=28800` });
   }
   if (req.method === 'POST' && pathname === '/api/logout') {
