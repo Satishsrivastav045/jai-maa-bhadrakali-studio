@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11100f" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Admin Dashboard | Jai Maa Bhadrakali Studio</title>
+  <link rel="icon" href="assets/logo.png" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+    <div class="login-card">
+      <img src="assets/logo.png" alt="Jai Maa Bhadrakali Studio logo" />
+      <p class="kicker">Private workspace</p>
+      <h1 id="loginTitle">Studio admin login</h1>
+      <p>Manage enquiries, gallery and business details securely.</p>
+      <form id="loginForm">
+        <label>Username<input name="username" autocomplete="username" value="admin" required /></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+        <button class="primary-button" type="submit">Sign in <span>→</span></button>
+        <small id="loginError" role="alert"></small>
+      </form>
+    </div>
+  </section>
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <a class="admin-brand" href="index.html"><img src="assets/logo.png" alt="Jai Maa Bhadrakali Studio logo" /><span><strong>Jai Maa</strong><small>Bhadrakali Studio</small></span></a>
+      <nav aria-label="Admin navigation">
+        <a class="nav-link active" href="#overview" data-section="overview"><span>⌂</span>Overview</a>
+        <a class="nav-link" href="#enquiries" data-section="enquiries"><span>✦</span>Enquiries <b id="navLeadCount">0</b></a>
+        <a class="nav-link" href="#gallery-manager" data-section="gallery-manager"><span>▧</span>Gallery Manager</a>
+        <a class="nav-link" href="#settings" data-section="settings"><span>⚙</span>Business Settings</a>
+      </nav>
+      <a class="public-link" href="index.html"><span>↗</span> Open Website</a>
+    </aside>
+
+    <main class="admin-main">
+      <header class="topbar">
+        <div><p class="kicker">Studio workspace</p><h1>Good morning, Jai Maa Studio</h1></div>
+        <div class="top-actions"><a class="view-site" href="index.html">View public site <span>↗</span></a><button class="logout-button" id="logoutButton" type="button">Log out</button></div>
+      </header>
+
+      <section class="admin-section active-section" id="overview" data-panel="overview">
+        <div class="section-intro"><div><p class="kicker">Overview</p><h2>Your studio at a glance</h2></div><span class="updated-label" id="lastUpdated">No changes yet</span></div>
+        <div class="stat-grid">
+          <article class="stat-card accent"><span class="stat-icon">✦</span><p>New enquiries</p><strong id="leadCount">0</strong><small>Saved from the date form</small></article>
+          <article class="stat-card"><span class="stat-icon">▧</span><p>Gallery images</p><strong id="galleryCount">0</strong><small>Shown in your portfolio</small></article>
+          <article class="stat-card"><span class="stat-icon">◉</span><p>Profile views</p><strong id="viewCount">0</strong><small>On this browser</small></article>
+          <article class="stat-card"><span class="stat-icon">☎</span><p>Studio phone</p><strong id="phoneStat">88534 96825</strong><small>Quick call / WhatsApp ready</small></article>
+        </div>
+        <div class="overview-grid">
+          <article class="panel recent-panel"><div class="panel-heading"><div><p class="kicker">Inbox</p><h3>Recent enquiries</h3></div><button class="text-button" type="button" data-jump="enquiries">View all <span>→</span></button></div><div id="recentLeads" class="lead-list"><div class="empty-state">No enquiries yet. Your next date request will appear here.</div></div></article>
+          <article class="panel quick-panel"><div class="panel-heading"><div><p class="kicker">Shortcuts</p><h3>Keep the profile fresh</h3></div></div><a class="quick-action" href="#gallery-manager" data-jump="gallery-manager"><span class="quick-icon">+</span><span><strong>Add gallery image</strong><small>Showcase another wedding story</small></span><b>→</b></a><a class="quick-action" href="#settings" data-jump="settings"><span class="quick-icon">⚙</span><span><strong>Update contact details</strong><small>Keep calls and enquiries accurate</small></span><b>→</b></a><a class="quick-action" href="index.html" target="_blank"><span class="quick-icon">↗</span><span><strong>Preview public website</strong><small>See the visitor experience</small></span><b>→</b></a></article>
+        </div>
+      </section>
+
+      <section class="admin-section" id="enquiries" data-panel="enquiries">
+        <div class="section-intro"><div><p class="kicker">Lead inbox</p><h2>Wedding & event enquiries</h2><p class="section-copy">Date requests submitted on this browser are listed here.</p></div><button class="danger-button" id="clearLeads" type="button">Clear enquiries</button></div>
+        <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Person</th><th>Event</th><th>Date</th><th>Location</th><th>Service</th><th>Received</th><th></th></tr></thead><tbody id="leadTable"><tr><td colspan="7"><div class="empty-state">No enquiries yet.</div></td></tr></tbody></table></div></div>
+      </section>
+
+      <section class="admin-section" id="gallery-manager" data-panel="gallery-manager">
+        <div class="section-intro"><div><p class="kicker">Portfolio</p><h2>Gallery manager</h2><p class="section-copy">Add image URLs to keep the portfolio current. Changes are saved in this browser.</p></div></div>
+        <div class="gallery-admin-grid"><form class="panel form-panel" id="galleryForm"><p class="kicker">New gallery item</p><h3>Add a portfolio image</h3><label>Choose image from computer<input id="galleryFile" name="file" type="file" accept="image/*" required /><output id="galleryFileStatus" class="file-status">No photo selected</output></label><label>Title<input name="title" type="text" placeholder="Wedding highlight" required /></label><label>Category<select name="category"><option value="wedding">Wedding</option><option value="bride">Bride</option><option value="couple">Couple</option><option value="events">Events</option><option value="cinematic">Cinematic</option><option value="pre-wedding">Pre-Wedding</option></select></label><button class="primary-button" type="submit">Upload to gallery <span>↑</span></button><p class="form-note">Photo select karte hi direct server par upload hogi. URL paste karne ki zarurat nahi hai.</p></form><div class="panel gallery-admin-panel"><div class="panel-heading"><div><p class="kicker">Current portfolio</p><h3>Published images</h3></div></div><div class="admin-gallery" id="adminGallery"></div></div></div>
+      </section>
+
+      <section class="admin-section" id="settings" data-panel="settings">
+        <div class="section-intro"><div><p class="kicker">Business profile</p><h2>Business settings</h2><p class="section-copy">These details power call, WhatsApp and contact-card actions on the public site.</p></div></div>
+        <form class="panel settings-form" id="settingsForm"><div class="form-grid"><label>Studio name<input name="name" required /></label><label>Phone number<input name="phone" type="tel" required /></label><label>Email address<input name="email" type="email" required /></label><label>Website URL<input name="website" type="url" /></label><label class="full-field">Studio address<textarea name="address" rows="3" required></textarea></label></div><div class="form-footer"><span id="settingsStatus" role="status"></span><button class="primary-button" type="submit">Save business details <span>✓</span></button></div></form>
+      </section>
+    </main>
+  </div>
+  <div class="admin-toast" id="adminToast" role="status" aria-live="polite"></div>
+  <script src="admin.js?v=upload-v4"></script>
+</body>
+</html>

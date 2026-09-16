@@ -1,0 +1,16 @@
+[Unit]
+Description=Jai Maa Bhadrakali Studio Node server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/jai-maa-bhadrakali-studio/backend
+EnvironmentFile=/etc/jai-maa-studio.env
+ExecStart=/usr/bin/node /var/www/jai-maa-bhadrakali-studio/backend/server.js
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
